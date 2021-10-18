@@ -1,0 +1,255 @@
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, ForeignKey, Float
+from sqlalchemy.orm import sessionmaker
+'''
+This application is for a pizza delivery system. It handles creating a customer, an employee, a store owner,
+creates a database for all different kinds of pizza, and handles the orders.
+The first three are meant for the database of keeping track of each guest that creates an account in the
+application. The employees are put in the database for tracking purposes and to see which employee is able to
+deliver food or not. The store owner is meant to keep track of who owns the stores and if they have proof of ownership.
+The pizza class is meant to store different kinds of pizzas for the menu, so when guests want to see what kind of
+pizza they sell, they can see the types of pizza and the prices. Finally, the order system is meant to simulate when
+a guest orders pizza from the application and sends directly to the employees so they can embark on completing the pie.
+All of these are stored in a database, so they can be tracked and eventually data mined.
+'''
+Base = declarative_base()
+#Person class used for inheritance as the parent class
+class Person(Base):
+    def __init__(self, firstName, lastName, email, phone):
+        self.firstName = firstName
+        self.lastName = lastName
+        self.emailAddress = email
+        self.phoneNum = phone
+        self.fullName = firstName + " " + lastName
+        
+    def getName(self):
+        return self.fullName
+        
+    def setEmail(self, emailAddress):
+        self.emailAddress = emailAddress
+        
+    def getEmail(self):
+        return "{0}'s email is {1}".format(self.fullName,self.emailAddress)
+      
+    def setPhone(self, phoneNum):
+        self.phoneNum = phoneNum
+        
+    def getPhone(self):
+        return "{0}'s phone number is {1}".format(self.fullName,self.phoneNum)
+    #tablename must be delcared when using ORM  
+    __tablename__ = "Persons"
+    #various columns in the table
+    id = Column(Integer, primary_key=True)
+    firstName = Column(String)
+    lastName = Column(String)
+    emailAddress = Column(String)
+    phoneNum = Column(String)
+        
+    def __repr__(self):
+        return "Name is {0}".format(self.fullName)
+#customer class inherits from Person class and is used when a customer creates an account using the delivery application
+class Customers(Person):
+    def __init__(self, person, customer_id, accountName, passcode, account_id, food):
+        self.fullName = person.getName()
+        self.customer_id = customer_id
+        self.accountName = accountName
+        self.accountPasscode = passcode
+        self.account_id = account_id
+        self.favoriteFood = food
+        
+    def setAccountName(self, accountName):
+        self.accountName =  accountName
+        
+    def setPasscode(self, accountPasscode):
+        self.accountPasscode = accountPasscode
+        
+    def setAccountID(self, accountID):
+        self.accountID = accountID
+        
+    def setFavorite(self, favoriteFood):
+        self.favoriteFood = favoriteFood
+   #tablename must be delcared when using ORM  
+    __tablename__ = "Customers"
+    #various columns in the table
+    customers_id = Column(Integer, primary_key=True)
+    fullName = Column(String)
+    accountName = Column(String)
+    accountPasscode = Column(String)
+    account_id = Column(Integer, ForeignKey('Persons.id'))
+    favoriteFood = Column(String)
+        
+    def __repr__(self):
+        return "{0}: account: {1}, passcode: {2}, accountID: {3}, favorite food is {4}".format(self.fullName,self.accountName,self.accountPasscode,self.accountID,self.favoriteFood)
+#employees class inherits from Person as a child class
+class Employees(Person):
+    def __init__(self, person, employee_id, account_id, jobTitle, commute):
+        self.fullName = person.getName()
+        self.employee_id = employee_id
+        self.account_id = account_id
+        self.payGrade = 7.25
+        self.jobDescription = jobTitle
+        self.commute = commute
+        
+    def moneyRaise(self):
+        self.payGrade += .75
+        
+    def setPay(self, startingPay):
+        self.payGrade = startingPay
+        
+    def setJobTitle(self, jobTitle):
+        self.jobDescription = jobTitle
+    '''    
+    def levelOfTraining(self, level):
+        self.levelOfTraining = level
+    '''    
+    def typeOfCommute(self, commute):
+        self.commute = commute
+    #tablename must be delcared when using ORM      
+    __tablename__ = "Employees"
+    #various columns in the table
+    employee_id = Column(Integer, primary_key=True)
+    account_id = Column(Integer, ForeignKey('Persons.id'))
+    payGrade = Column(Float)
+    jobDescription = Column(String)
+    fullName = Column(String)
+    commute = Column(String)
+    
+    def __repr__(self):
+        return "{0}: pay: {1}, title: {2}, commute: {3}".format(self.fullName,self.payGrade,self.jobDescription,self.commute)
+#store owner class inherits from Person as a child class
+class StoreOwner(Person):
+    def __init__(self, person, ownership, employee_id, numOfEmployees, numOfStores, revenue):
+        self.fullName = person.getName()
+        self.owner_id = ownership
+        self.numOfEmployees = numOfEmployees
+        self.numOfStores = numOfStores
+        self.revenue = revenue
+        self.employee_id = employee_id
+        
+    def ownershipProof(self, proof):
+        self.ownershipProof = proof
+        
+    def hireEmployees(self, num):
+        self.numOfEmployees = self.numOfEmployees + num
+        
+    def fireEmployees(self, num):
+        self.numOfEmployees = self.numOfEmployees - num
+        
+    def addNumStores(self, num):
+        self.numOfStores += num
+        
+    def subtractNumStores(self, num):
+        self.numOfStores -+ num
+        
+    def setRevenue(self, revenue):
+        self.revenue = revenue
+    #tablename must be delcared when using ORM      
+    __tablename__ = "Store_Owner"
+    #various columns in the table
+    owner_id = Column(Integer, primary_key=True)
+    employee_id = Column(Integer, ForeignKey("Persons.id"))
+    numOfEmployees = Column(Integer)
+    numOfStores = Column(Integer)
+    revenue = Column(Integer)
+    fullName = Column(String)
+    
+    def __repr__(self):
+        return "{0}: number of employees: {1}, number of stores: {2}, revenue: {3}".format(self.fullName,self.numOfEmployees,self.numOfStores,self.revenue)
+
+#pizza class that represents a table for pizzas
+class Pizza(Base):
+    def __init__(self, name, crust, sauce, toppings, price):
+        self.name = name
+        self.crust = crust
+        self.sauce = sauce
+        self.toppings = toppings
+        self.price = price
+    #tablename must be delcared when using ORM      
+    __tablename__ = 'Pizzas'
+    #various columns in the table
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    crust = Column(String)
+    sauce = Column(String)
+    toppings = Column(String)
+    price = Column(Integer)
+    
+    def __repr__(self):
+        return "<Pizza[name-{0}, crust-{1}, sauce-{2}, toppings-{3}, price-{4}]>".format(self.name, self.crust, self.sauce, self.toppings, self.price)
+
+#order class represents a table for the orders that the application receives
+class Order(Base):
+    def __init__(self, order_id, name, typeOfPizza, delivery, price):
+        self.order_id = order_id
+        self.name = name
+        self.typeOfPizza = typeOfPizza
+        self.delivery = delivery
+        self.price = price
+    #tablename must be delcared when using ORM      
+    __tablename__ = "Order"
+    #various columns in the table
+    order_id = Column(Integer, primary_key=True)
+    name = Column(String)
+    typeOfPizza = Column(String)
+    delivery = Column(String)
+    price = Column(Float)
+        
+    def __repr__(self):
+        return "<Thank you, {0}. Your {1} to be {2} will be ready soon. The total cost is ${3}>".format(self.name,self.typeOfPizza,self.delivery,self.price)
+
+def main():
+    #creates engine for database
+    engine = create_engine('sqlite://')
+    #instantiates database
+    Base.metadata.create_all(engine)
+    #creates a session that connects to the database
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    #add values to each table
+    session.add_all([
+        #customers
+        Customers(person=Person(firstName="Topher",lastName="Grace",email="topgrace@gmail.com",phone="432 234-2345"),customer_id=400,accountName="erikForman",passcode="70show", account_id=1,food="taco pizza"),
+        Customers(person=Person(firstName="garion",lastName="morgan",email="gargan@gmail.com",phone="555 555-4532"),customer_id=401,accountName="ghostbeat",passcode="ghost", account_id=2,food="pepperoni pizza"),
+        #employees
+        Employees(person=Person(firstName="claire",lastName="morgan",email="clagan@gmail.com",phone="555 254-6542"),employee_id=300,account_id=3,jobTitle="chef",commute="car"),
+        Employees(person=Person(firstName="ellie",lastName="morgan",email="eligan@gmail.com",phone="555 777-8532"),employee_id=301,account_id=4,jobTitle="delivery_person",commute="motorcycle"),
+        #storeManager
+        StoreOwner(person=Person(firstName="John",lastName="Doe",email="johnDoe@gmail.com",phone="222 852-3697"),ownership=1,employee_id=100,numOfEmployees=10,numOfStores=1, revenue=25000),
+        #pizzas
+        Pizza(name="Cheese Pizza", crust="original", sauce = "red sauce", toppings="cheese", price=10),
+        Pizza(name="Pepperoni Pizza", crust="original", sauce = "red sauce", toppings="cheese and pepperoni", price=12),
+        Pizza(name="Supreme Pizza", crust="original", sauce = "red sauce", toppings="cheese, pepperoni, sasuage, and veggies", price=14),
+        #order
+        Order(order_id=1, name="Topher Grace",typeOfPizza="Taco Pizza", delivery="Dine-In", price=14),
+        Order(order_id=2, name="Garion Morgan",typeOfPizza="Pepperoni Pizza", delivery="Delivery", price=12),
+        Order(order_id=3, name="John Doe",typeOfPizza="Cheese Pizza", delivery="Dine-In", price=10),
+        Order(order_id=4, name="Jane Doe",typeOfPizza="Plain Pizza", delivery="Pick-Up", price=10)])
+    #commits data into database    
+    session.commit()
+    '''
+    This next section is strictly used to display the successfulness of each product being recorded in the sqlite database
+    First, we display the customers that were registered in the application.
+    Second, we display the employees that work at the chain
+    Third, we display the store owner of the chain
+    Fourth, we display the types of pizza that are created in the resturant
+    Finally, we are displaying the orders that have been taken from the application for the employees to execute
+    '''
+    #retrieves data from database for customers
+    for row in session.query(Customers).all():
+        print(row.fullName, row.accountName, row.accountPasscode, row.account_id, row.favoriteFood)
+    #retrieves data from database for employees  
+    for row in session.query(Employees).all():
+        print(row.fullName, row.payGrade, row.jobDescription, row.commute)
+    #retrieves data from database for storeowner    
+    for row in session.query(StoreOwner).all():
+        print(row.fullName, row.numOfEmployees, row.numOfStores, row.revenue) 
+    #retrieves data from database for pizzas
+    for row in session.query(Pizza).all():
+        print(row.name +": " + row.toppings + " $" + str(row.price))
+    #retrieves data from database for the orders
+    for row in session.query(Order).all():
+        print(row.name,row.typeOfPizza,row.delivery,row.price)
+    
+if __name__ == "__main__":
+    main()
